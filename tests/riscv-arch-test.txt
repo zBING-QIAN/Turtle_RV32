@@ -1,0 +1,29 @@
+// Prerequisite :  riscof spike riscv32-unknown-elf
+pip3 install git+https://github.com/riscv-software-src/riscv-config.git@dev  
+
+// Use riscv32-unknown-elf to compile riscv-tests
+git clone https://github.com/riscv/riscv-tests
+
+// Prepare riscv-arch-test/spike
+riscof setup --dutname spike
+
+
+
+// In this work, I compare the output signature between spike and my cpu
+// Modify PATH_TO_RISCV_ARCH_TEST/config.ini (see tests/riscv-arch-test/config.ini)
+
+// Change spike isa/platform yaml
+// Copy tests/riscv-arch-test/spike/spike_isa.yaml PATH_TO_RISCV_ARCH_TEST/spike/spike_isa.yaml
+// Copy tests/riscv-arch-test/spike/spike_platform.yaml PATH_TO_RISCV_ARCH_TEST/spike/spike_platform.yaml
+
+// Disable spike misaligned option because my cpu does not support misaligned accessed
+// Copy tests/riscv-arch-test/spike/riscof_spike.py PATH_TO_RISCV_ARCH_TEST/spike/riscof_spike.py
+
+
+// Setup my_cpu(target emulator or cpu design)
+// Copy tests/riscv-arch-test/my_cpu PATH_TO_RISCV_ARCH_TEST/my_cpu
+
+// Run tests
+ cd PATH_TO_RISCV_ARCH_TEST
+ riscof run --config=config.ini     --suite=riscv-test-suite/rv32i_m     --env=riscv-test-suite/env
+ riscof run --config=config.ini     --suite=riscv-test-suite/rv32i_m/(specific test set)     --env=riscv-test-suite/env

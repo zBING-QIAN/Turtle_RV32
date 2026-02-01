@@ -1,0 +1,85 @@
+/dts-v1/;
+
+/ {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    compatible = "riscv-minimal";
+    model = "riscv-minimal,rv32imac";
+
+    /* 1. Aliases allow the system to map a generic name to a specific device */
+    aliases {
+        serial0 = &uart0;
+    };
+
+    chosen {
+        /* 2. Modified bootargs: 
+           - Changed earlycon to 'sbi' to use OpenSBI's firmware calls.
+           - Added 115200n8 parameters to console for clarity. */
+        // bootargs = "earlycon=sbi console=ttyS0,115200n8 rdinit=/init root=/dev/ram0 rw";
+        bootargs = "earlycon=sbi console=ttyS0,115200n8 root=/dev/ram0";
+        /* 3. Added stdout-path: 
+           Tells both OpenSBI and Linux exactly where the main terminal is. */
+        stdout-path = "/soc/uart@10000000";
+
+    };
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+        timebase-frequency = <10000000>;
+
+        cpu0: cpu@0 {
+            device_type = "cpu";
+            reg = <0>;
+            status = "okay";
+            compatible = "riscv";
+            riscv,isa = "rv32imacsu";
+            mmu-type = "riscv,sv32";
+
+            cpu0_intc: interrupt-controller {
+                #interrupt-cells = <1>;
+                #address-cells = <0>;
+                interrupt-controller;
+                compatible = "riscv,cpu-intc";
+            };
+        };
+    };
+
+    /* 256MB of RAM starting at 0x80000000 */
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x80000000 0x10000000>;
+    };
+    soc {
+        #address-cells = <1>;
+        #size-cells = <1>;
+        compatible = "simple-bus";
+        ranges;
+
+        /* Core Local Interruptor (CLINT) */
+        clint@20000000 {
+            compatible = "riscv,clint0";
+            interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7>;
+            reg = <0x20000000 0x10000>;
+        };
+
+        plic0: interrupt-controller@30000000 {
+			#address-cells = <0>;
+			#interrupt-cells = <1>;
+			compatible = "sifive,plic-1.0.0", "riscv,plic0";
+			reg = <0x30000000 0x4000000>;
+			interrupt-controller;
+			interrupts-extended = <&cpu0_intc 11>, <&cpu0_intc 9>;
+			riscv,ndev = <16>;
+		};
+        /* Standard 8250/16550 UART */
+        uart0: uart@10000000 {
+            compatible = "ns16550a";
+            clock-frequency = <10000000>;
+			reg = <0x10000000 0x100>;
+			interrupt-parent = <&plic0>;
+			interrupts = <10>;
+			status = "okay";
+        };
+    };
+};

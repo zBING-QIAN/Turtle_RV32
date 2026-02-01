@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo "init: start"
+
+mount -t proc none /proc
+echo "init: mounted proc"
+
+mount -t sysfs none /sys
+echo "init: mounted sys"
+
+mount -t devtmpfs devtmpfs /dev
+echo "init: mounted dev"
+
+echo "Successfully booted RV32IMAC Linux on MYEMU!"
+
+exec /bin/sh

@@ -1,0 +1,9 @@
+// Prerequisite : download riscv64-unknown-elf
+// Use riscv64-unknown-elf to compile riscv-tests
+git clone https://github.com/riscv/riscv-tests
+cd riscv-tests
+git submodule update --init --recursive
+autoconf
+./configure --prefix=$RISCV/target
+make XLEN=32
+// Use "python tests/run_riscv_tests.py" to run riscv-tests

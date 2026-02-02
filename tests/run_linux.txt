@@ -8,7 +8,8 @@ make     CROSS_COMPILE=riscv64-linux-gnu-     PLATFORM=generic     PLATFORM_RISC
 git clone https://github.com/mirror/busybox.git
 cd busybox
 make CROSS_COMPILE=riscv32-unknown-linux-gnu- ARCH=riscv defconfig
-#Delete network and mail, uncheck
+make CROSS_COMPILE=riscv32-unknown-linux-gnu- ARCH=riscv menuconfig
+#uncheck network and mail
 #[ ] SHA1: Use hardware accelerated instructions if possible              
 #[ ] SHA256: Use hardware accelerated instructions if possible 
 both under Settings menu

@@ -66,6 +66,8 @@ The emulator assumes the following physical memory layout for Linux boot:
     
 2.  **Storage:** Add **VirtIO-Block** device support to allow mounting persistent disk images.
     
-3.  **Cache:** Implement **Instruction and Data Caches** to simulate memory latency more accurately.
+3.  **Cache:** Implement **Instruction and Data Caches** to simulate memory latency more accurately. 
+
+4.  **Branch Predictor:** Implement **Branch Predictor** to load instruction more efficiently.
     
-4. **Performance** Improve the speed of simulation
+5. **Performance** Improve the speed of simulation

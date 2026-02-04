@@ -70,7 +70,6 @@ SC_MODULE(CPU)
     sc_signal<uint32_t> if_id_tval;
     sc_signal<bool> if_id_flush;
     sc_signal<bool> if_id_accept;
-    sc_signal<bool> if_id_wait_buffer;
     sc_signal<bool> id_ex_flush;
     sc_signal<bool> immu_flush;
     sc_signal<uint32_t> fetch_pc;
@@ -127,7 +126,6 @@ SC_MODULE(CPU)
         prefetch->id_ex_pc(id_ex_pc);
         prefetch->if_id_flush(if_id_flush);
         prefetch->if_id_accept(if_id_accept);
-        prefetch->if_id_wait_buffer(if_id_wait_buffer);
         prefetch->id_ex_flush(id_ex_flush);
         prefetch->immu_flush(immu_flush);
         prefetch->fetch_pc(fetch_pc);
@@ -135,6 +133,7 @@ SC_MODULE(CPU)
         mmu->clk(clk);
         mmu->rst(rst);
         mmu->immu_ready(immu_ready);
+        mmu->if_id_accept(if_id_accept);
         mmu->fetch_pc(fetch_pc);
         mmu->flush(flush);
         mmu->immu_to_ifetch(immu_to_ifetch);
@@ -160,7 +159,6 @@ SC_MODULE(CPU)
         fetch_inst->if_id_fault(if_id_fault);
         fetch_inst->if_id_flush(if_id_flush);
         fetch_inst->if_id_accept(if_id_accept);
-        fetch_inst->if_id_wait_buffer(if_id_wait_buffer);
         fetch_inst->if_id_tval(if_id_tval);
         // decode
         decode->clk(clk);

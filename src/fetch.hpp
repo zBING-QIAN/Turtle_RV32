@@ -19,7 +19,6 @@ SC_MODULE(FetchInstruction)
     sc_out<uint32_t> if_id_pc;
     sc_out<uint8_t> if_id_fault;
     sc_out<bool> if_id_flush;
-    sc_out<bool> if_id_wait_buffer; // incomplete instruction
 
     sc_out<uint32_t> if_id_tval;
     sc_out<bool> if_id_accept;
@@ -28,14 +27,13 @@ SC_MODULE(FetchInstruction)
     uint64_t buffer_access_fault;
     uint32_t buffer_idx;
     uint32_t buffer_addr;
-
     SC_HAS_PROCESS(FetchInstruction);
     FetchInstruction(sc_module_name name) : sc_module(name)
     {
         SC_METHOD(get_inst);
         sensitive << clk.pos();
         SC_METHOD(buffer_state);
-        sensitive << stall << if_id_flush << immu_to_ifetch;
+        sensitive << stall << clk.neg();
     }
     void buffer_state() // info prefetch to fetch next pc
     {
@@ -43,7 +41,11 @@ SC_MODULE(FetchInstruction)
         auto input = immu_to_ifetch.read();
         if (input.mmu_rsp_ack)
         {
-            if (!stall.read() && !if_id_flush.read())
+            if (immu_pc.read() != buffer_addr + (buffer_idx >> 3))
+            {
+                accept = 1;
+            }
+            else if (!stall.read() && !if_id_flush.read())
             {
                 if ((buffer & 3) == 3)
                 {
@@ -56,10 +58,10 @@ SC_MODULE(FetchInstruction)
             }
             else
             {
-                accept = buffer_idx <= 32;
+                accept = (buffer_idx <= 32);
             }
         }
-
+        // std::cout << "accept :" << accept << "\n";
         if_id_accept.write(accept);
     }
     void get_inst()
@@ -159,13 +161,11 @@ SC_MODULE(FetchInstruction)
         // output if_id
         if (rst.read() || flush.read())
         {
-            if_id_wait_buffer.write(0);
             if_id_flush.write(true);
         }
         else if ((buffer & 3) == 3)
         {
             if_id_flush.write(buffer_idx < 32);
-            if_id_wait_buffer.write(buffer_idx < 32);
             if (buffer_access_fault & 1)
             {
                 if_id_fault.write(INSTR_ACCESS_FAULT);
@@ -195,7 +195,6 @@ SC_MODULE(FetchInstruction)
         else
         {
             if_id_flush.write(buffer_idx < 16);
-            if_id_wait_buffer.write(0);
             if (buffer_access_fault & 1)
             {
                 if_id_fault.write(INSTR_ACCESS_FAULT);
@@ -220,7 +219,7 @@ SC_MODULE(FetchInstruction)
         auto input = immu_to_ifetch.read();
 
         if (immu_to_ifetch.read().mmu_rsp_ack)
-            std::cout << "IMMU rsp: PC" << std::hex << immu_pc.read() << ", rdata " << immu_to_ifetch.read().mmu_rsp_rdata << ", fault : " << (int)immu_to_ifetch.read().mmu_rsp_fault << "\n";
+            std::cout << "IMMU rsp: PC " << std::hex << immu_pc.read() << ", rdata " << immu_to_ifetch.read().mmu_rsp_rdata << ", fault : " << (int)immu_to_ifetch.read().mmu_rsp_fault << "\n";
         std::cout << "IF buffer PC: " << std::hex << buffer_addr << ", buffer size " << buffer_idx << ", buffer data : " << buffer << " page fault : " << buffer_page_fault << " access fault " << buffer_access_fault << "\n";
     }
 };

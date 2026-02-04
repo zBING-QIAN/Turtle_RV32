@@ -7,6 +7,7 @@ SC_MODULE(PreFetch)
 {
     sc_in<bool> clk;
     sc_in<bool> immu_ready;
+    // sc_in<bool> stall;
     // sc_in<uint32_t> ex_pc; // ex_pc+4 / branch / trap occur / m(s)ret
     sc_in<uint32_t> npc;
     sc_in<uint32_t> immu_pc;
@@ -14,7 +15,6 @@ SC_MODULE(PreFetch)
     sc_in<uint32_t> id_ex_pc;
     sc_in<bool> if_id_flush;
     sc_in<bool> if_id_accept;
-    sc_in<bool> if_id_wait_buffer;
     sc_in<bool> id_ex_flush;
     sc_in<bool> immu_flush;
 
@@ -23,7 +23,6 @@ SC_MODULE(PreFetch)
     PreFetch(sc_module_name name) : sc_module(name)
     {
         SC_METHOD(next_pc);
-        // sensitive << npc << immu_pc << if_id_accept << if_id_wait_buffer;
         sensitive << clk.pos();
     }
 
@@ -47,10 +46,6 @@ SC_MODULE(PreFetch)
         {
             nextpc = (fetch_pc.read() & ~3) + 4; // TODO : predict pc base on instruction in decode stage
             // std::cout << "npc debug   " << id_ex_pc.read() << " " << if_id_pc.read() << " " << immu_pc.read() << "\n";
-        }
-        else
-        {
-            nextpc = (immu_pc.read() & ~3) + 4;
         }
         fetch_pc.write(nextpc);
     }

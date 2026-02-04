@@ -663,8 +663,6 @@ ID_EX Decode::decode(uint32_t inst)
             if (funct7 == 0b0001001)
             {
                 id_ex.type = InstrType::SFENCE_VMA;
-                id_ex.rs1 = rs1;
-                id_ex.rs2 = rs2;
             }
             else // ECALL, EBREAK, MRET
                 switch (get_bits(inst, 31, 20))

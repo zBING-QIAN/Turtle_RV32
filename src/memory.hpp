@@ -549,19 +549,7 @@ struct RAM : Device
         }
         return (*dmem)[addr - dseg_base];
     }
-    uint8_t amo_lr(uint32_t addr)
-    {
-        uint32_t base = find_seg(addr);
-        if (dseg_base != base)
-        {
-            build_seg(base);
-            dseg_base = base;
-            dmem = &seg_table[dseg_base];
-            dreserve = &reservation[dseg_base];
-        }
-        (*dreserve)[addr - dseg_base] = 1;
-        return (*dmem)[addr - dseg_base];
-    }
+
     void write(uint32_t addr, uint8_t val) override
     {
         uint32_t base = find_seg(addr);
@@ -603,12 +591,20 @@ struct RAM : Device
             dmem = &seg_table[dseg_base];
             dreserve = &reservation[dseg_base];
         }
-        bool out = (*dreserve)[addr - dseg_base] == 0;
-        for (int i = 0; i < size; i++)
+        return (*dreserve)[addr - dseg_base] == 0;
+    }
+    void amo_lr(uint32_t addr)
+    {
+        uint32_t base = find_seg(addr);
+        if (dseg_base != base)
         {
-            (*dreserve)[addr - dseg_base] = 0;
+            build_seg(base);
+            dseg_base = base;
+            dmem = &seg_table[dseg_base];
+            dreserve = &reservation[dseg_base];
         }
-        return out;
+        (*dreserve)[addr - dseg_base] = 1;
+        // return (*dmem)[addr - dseg_base];
     }
 };
 
@@ -737,7 +733,7 @@ SC_MODULE(Memory)
                         for (int i = dmem_in.dmem_size - 1; i >= 0; i--)
                         {
                             dmem_out.mem_rsp_rdata <<= 8;
-                            dmem_out.mem_rsp_rdata |= ram.amo_lr(dmem_in.dmem_addr + i);
+                            dmem_out.mem_rsp_rdata |= ram.read(dmem_in.dmem_addr + i);
                         }
                         break;
                     case 1: // InstrType::SC_W:
@@ -805,6 +801,10 @@ SC_MODULE(Memory)
                     switch (dmem_in.dmem_amoop)
                     {
                     case 0: // InstrType::LR_W:
+                        for (int i = 0; i < dmem_in.dmem_size; i++)
+                        {
+                            ram.amo_lr(dmem_in.dmem_addr + i);
+                        }
                         break;
                     case 1: // InstrType::SC_W:
                         if (dmem_out.mem_rsp_rdata == 0)

@@ -7,6 +7,7 @@
 #include "pmp.hpp"
 #include "memory.hpp"
 #include "decode.hpp"
+#include "tlb.hpp"
 SC_MODULE(EXEC)
 {
     uint32_t priv;
@@ -43,6 +44,7 @@ SC_MODULE(EXEC)
     sc_vector<sc_signal<uint32_t>> csr_regs;
     PLIC_DEV *plic;
     CLINT_DEV *clint;
+    TLB tlb;
     uint32_t _val = 0;
     bool _on_trap = 0, _stall = 0, _flush = 0;
     bool _csr_access = 0,
@@ -722,6 +724,7 @@ SC_MODULE(EXEC)
                     }
                     else
                     {
+                        tlb.flush(id_ex.rs2_val, id_ex.rs1_val);
                         _flush = 1;
                         _cause = 0;
                         _on_trap = 0;

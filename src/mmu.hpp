@@ -3,6 +3,7 @@
 #include "exec.hpp"
 #include "pmp.hpp"
 #include <systemc>
+#include <vector>
 using namespace sc_core;
 
 #define DIRTY_BIT 0x80
@@ -16,6 +17,7 @@ using namespace sc_core;
 #define SATP_ON(satp) ((satp >> 31) & 0x1)
 #define IS_LEAF_PTE(pte) ((pte & 0xE) != 0)
 #define USERBIT(pte) ((pte >> 4) & 1)
+
 bool is_pma_valid(uint32_t phys_addr)
 {
     // Define your platform's valid ranges (for riscv-arch-test)
@@ -46,6 +48,7 @@ SC_MODULE(MMU)
     sc_in<bool> rst;
     sc_out<bool> immu_ready;
 
+    sc_in<bool> if_id_accept;
     // npc to mmu
     sc_in<uint32_t> fetch_pc;
     sc_in<bool> flush;
@@ -68,6 +71,7 @@ SC_MODULE(MMU)
     sc_in<MEM_OUT> mem_to_dmmu;
 
     EXEC *exec;
+
     sc_signal<uint8_t> d_state;
     sc_signal<bool> d_page_fault;
     sc_signal<bool> d_pmp_fault;
@@ -101,6 +105,7 @@ SC_MODULE(MMU)
 
     DMEM_IN d_mmu_mem;
     IMEM_IN i_mmu_mem;
+
     SC_HAS_PROCESS(MMU);
     MMU(sc_module_name name, EXEC * e) : sc_module(name), exec(e)
     {
@@ -205,15 +210,63 @@ SC_MODULE(MMU)
                          (d_priv != RV_PRIV_M_MODE)))
                     {
                         // load pte
-                        d_state.write(1);
-                        d_mmu_mem.dmem_req_ack = 1;
-                        d_mmu_mem.dmem_is_load = 1;
-                        d_mmu_mem.dmem_is_store = 0;
-                        d_mmu_mem.dmem_is_amo = 0;
-                        d_mmu_mem.dmem_amoop = 0;
-                        d_mmu_mem.dmem_addr = d_root_addr + d_vpn1 * 4;
-                        d_mmu_mem.dmem_wdata = 0;
-                        d_mmu_mem.dmem_size = 4;
+
+                        auto tlbentry = exec->tlb.find((d_satp >> 20) & 0x1ff, req.dmem_addr >> 12);
+                        d_pte = tlbentry.pte;
+                        // d_pte = 0;
+                        if (d_pte & 1)
+                        {
+                            d_ppn = (d_pte >> 10) & 0xFFFFF;
+                            _d_page_fault = ((((1 << d_op) & d_pte) == 0 && (d_op != 1 || MXR == 0 || (d_pte & 4) == 0)) ||
+                                             ((req.dmem_is_store || req.dmem_is_amo) &&
+                                              ((d_pte & DIRTY_BIT) == 0 || (d_pte & ACCESS_BIT) == 0)) ||
+                                             (req.dmem_is_load && (d_pte & ACCESS_BIT) == 0) ||
+                                             (d_priv == RV_PRIV_S_MODE && USERBIT(d_pte) && SUM == 0) ||
+                                             (d_priv == RV_PRIV_U_MODE && USERBIT(d_pte) == 0) ||
+                                             ((d_pte & 6) == 4));
+                            if (_d_page_fault)
+                            {
+                                d_state.write(0);
+                                d_mmu_mem.dmem_req_ack = 0;
+                            }
+                            else if (tlbentry.is_megapage)
+                            {
+                                d_mmu_mem.dmem_req_ack = 1;
+                                d_mmu_mem.dmem_is_load = req.dmem_is_load;
+                                d_mmu_mem.dmem_is_store = req.dmem_is_store;
+                                d_mmu_mem.dmem_is_amo = req.dmem_is_amo;
+                                d_mmu_mem.dmem_amoop = req.dmem_amoop;
+                                d_mmu_mem.dmem_addr = (d_ppn << 12) + (req.dmem_addr & 0x3FFFFF);
+                                d_mmu_mem.dmem_wdata = req.dmem_wdata;
+                                d_mmu_mem.dmem_size = req.dmem_size;
+                                d_state.write(3);
+                            }
+                            else
+                            {
+                                d_mmu_mem.dmem_req_ack = 1;
+                                d_mmu_mem.dmem_is_load = req.dmem_is_load;
+                                d_mmu_mem.dmem_is_store = req.dmem_is_store;
+                                d_mmu_mem.dmem_is_amo = req.dmem_is_amo;
+                                d_mmu_mem.dmem_amoop = req.dmem_amoop;
+                                d_mmu_mem.dmem_addr = (d_ppn << 12) + (req.dmem_addr & 0xFFF);
+                                d_mmu_mem.dmem_wdata = req.dmem_wdata;
+                                d_mmu_mem.dmem_size = req.dmem_size;
+                                d_state.write(3);
+                            }
+                        }
+                        else
+                        {
+
+                            d_state.write(1);
+                            d_mmu_mem.dmem_req_ack = 1;
+                            d_mmu_mem.dmem_is_load = 1;
+                            d_mmu_mem.dmem_is_store = 0;
+                            d_mmu_mem.dmem_is_amo = 0;
+                            d_mmu_mem.dmem_amoop = 0;
+                            d_mmu_mem.dmem_addr = d_root_addr + d_vpn1 * 4;
+                            d_mmu_mem.dmem_wdata = 0;
+                            d_mmu_mem.dmem_size = 4;
+                        }
                         // std::cout << "virtual memory for Data load/store satp is " << exec->csr_regs[CSR_SATP].read() << " " << d_root_addr << " " << d_vpn1 << " " << d_mmu_mem.dmem_addr << "\n";
                     }
                     else
@@ -278,6 +331,7 @@ SC_MODULE(MMU)
                             d_mmu_mem.dmem_wdata = req.dmem_wdata;
                             d_mmu_mem.dmem_size = req.dmem_size;
                             d_state.write(3);
+                            exec->tlb.store((d_satp >> 20) & 0x1ff, (req.dmem_addr >> 12), d_pte, 1);
                             // std::cout << "MAGAPAGE\n";
                         }
                         else
@@ -293,7 +347,7 @@ SC_MODULE(MMU)
                         }
                     }
                 }
-                else if (d_state.read() == 2)
+                else if (d_state == 2)
                 {
                     d_pte = rsp.mem_rsp_rdata;
                     d_ppn = (d_pte >> 10) & 0xFFFFF;
@@ -320,12 +374,12 @@ SC_MODULE(MMU)
                         d_mmu_mem.dmem_wdata = req.dmem_wdata;
                         d_mmu_mem.dmem_size = req.dmem_size;
                         d_state.write(3);
+                        exec->tlb.store((d_satp >> 20) & 0x1ff, (req.dmem_addr >> 12), d_pte, 0);
                     }
                 }
                 else
                 {
                     _d_page_fault = 0;
-
                     d_state.write(0);
                     d_mmu_mem.dmem_req_ack = 0;
                 }
@@ -335,6 +389,7 @@ SC_MODULE(MMU)
                 d_mmu_mem.dmem_req_ack = 0;
                 _d_page_fault = false;
             }
+
             bool _d_misaligned_fault = 0;
             if (d_mmu_mem.dmem_req_ack)
             {
@@ -429,7 +484,7 @@ SC_MODULE(MMU)
 
                 if (!flush.read())
                 {
-                    auto pc = fetch_pc.read();
+                    auto pc = (if_id_accept.read()) ? fetch_pc.read() : immu_pc.read();
                     immu_pc.write(pc);
                     _i_page_fault = 0;
                     i_satp = exec->csr_regs[CSR_SATP].read();
@@ -443,10 +498,41 @@ SC_MODULE(MMU)
                     if (SATP_ON(i_satp) &&
                         (exec->priv == RV_PRIV_S_MODE || exec->priv == RV_PRIV_U_MODE))
                     {
-                        // load pte
-                        i_state.write(1);
-                        i_mmu_mem.imem_req_ack = 1;
-                        i_mmu_mem.imem_addr = i_root_addr + i_vpn1 * 4;
+                        auto tlbentry = exec->tlb.find((i_satp >> 20) & 0x1ff, pc >> 12);
+                        i_pte = tlbentry.pte;
+                        // i_pte = 0;
+                        if (i_pte & 1)
+                        {
+                            i_ppn = (i_pte >> 10) & 0xFFFFF;
+                            _i_page_fault = (8 & i_pte) == 0 || (i_pte & ACCESS_BIT) == 0 ||
+                                            (exec->priv == RV_PRIV_S_MODE && USERBIT(i_pte)) ||
+                                            (exec->priv == RV_PRIV_U_MODE && USERBIT(i_pte) == 0) ||
+                                            ((i_pte & 6) == 4);
+                            if (_i_page_fault)
+                                i_mmu_mem.imem_req_ack = 0;
+                            else if (tlbentry.is_megapage)
+                            {
+                                i_mmu_mem.imem_req_ack = 1;
+                                is_fetch = 1;
+                                i_mmu_mem.imem_addr = (i_ppn << 12) + (pc & 0x3FFFFC); // 0x3FFFFF
+                                i_state.write(3);
+                            }
+                            else
+                            {
+                                is_fetch = 1;
+                                i_mmu_mem.imem_req_ack = 1;
+                                i_mmu_mem.imem_addr = (i_ppn << 12) + (i_offset & ~3);
+                                i_state.write(3);
+                            }
+                        }
+
+                        else
+                        {
+                            // load pte
+                            i_state.write(1);
+                            i_mmu_mem.imem_req_ack = 1;
+                            i_mmu_mem.imem_addr = i_root_addr + i_vpn1 * 4;
+                        }
                     }
                     else
                     {
@@ -487,6 +573,7 @@ SC_MODULE(MMU)
                             is_fetch = 1;
                             i_mmu_mem.imem_addr = (i_ppn << 12) + (immu_pc.read() & 0x3FFFFC); // 0x3FFFFF
                             i_state.write(3);
+                            exec->tlb.store((i_satp >> 20) & 0x1ff, (immu_pc.read() >> 12), i_pte, 1);
                         }
                         else
                         {
@@ -513,6 +600,7 @@ SC_MODULE(MMU)
                         i_mmu_mem.imem_req_ack = 1;
                         i_mmu_mem.imem_addr = (i_ppn << 12) + (i_offset & ~3);
                         i_state.write(3);
+                        exec->tlb.store((i_satp >> 20) & 0x1ff, (immu_pc.read() >> 12), i_pte, 0);
                     }
                 }
                 else

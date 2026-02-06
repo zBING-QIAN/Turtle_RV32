@@ -22,11 +22,11 @@ SC_MODULE(PreFetch)
     SC_HAS_PROCESS(PreFetch);
     PreFetch(sc_module_name name) : sc_module(name)
     {
-        SC_METHOD(next_pc);
+        SC_METHOD(next_pc_seq);
         sensitive << clk.pos();
     }
 
-    void next_pc()
+    void next_pc_seq()
     {
         uint32_t pc = npc.read();
 

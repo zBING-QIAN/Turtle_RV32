@@ -17,14 +17,14 @@ SC_MODULE(RegFile)
     RegFile(sc_module_name name) : sc_module(name)
     {
         regs.init(32);
-        SC_THREAD(write);
+        SC_THREAD(write_seq);
         sensitive << clk.pos();
         for (int i = 0; i < 32; i++)
             regs[i] = 0;
 
         regs[0xb] = 0x80100000;
     }
-    void write()
+    void write_seq()
     {
         wait();
         while (1)

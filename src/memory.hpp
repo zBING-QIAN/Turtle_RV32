@@ -242,11 +242,9 @@ struct UART_DEV : Device
             uart_irq(); // Update IIR based on current state
 
             thri = 0;
-            // std::cerr << "[DEBUG] UART IIR : " << iir << ", UART IER: " << ier << ", UART LCR: " << lcr << "\n";
             return iir;
 
         case 3: // LCR
-            // std::cerr << "[DEBUG] UART IIR : " << iir << ", UART IER: " << ier << ", UART LCR: " << lcr << "\n";
             return lcr;
 
         case 5: // LSR

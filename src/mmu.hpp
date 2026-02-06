@@ -112,26 +112,26 @@ SC_MODULE(MMU)
         i_state.write(0);
         d_state.write(0);
         // processing flow :
-        // dmem_rsp -> dmem_req -> dpmp_rsp
+        // dmem_rsp_comb -> dmem_req -> dpmp_rsp
         // 1. read pte or data from mem
         // 2. solve pte from mem or handle request from lsu
         // 3. check pte valid and send request address to pmp check
         // 4. send valid request address (when pmp valid) to mem and wait memory response
-        // SC_METHOD(dmem_rsp);
+        // SC_METHOD(dmem_rsp_comb);
         // sensitive << mem_to_dmmu << d_pmp_fault << d_page_fault << d_state;
-        SC_THREAD(dmem_rsp);
+        SC_THREAD(dmem_rsp_comb);
         sensitive << clk.pos();
-        SC_THREAD(dmem_req);
+        SC_THREAD(dmem_req_seq);
         sensitive << clk.pos();
         // SC_METHOD(imem_rsp);
         // sensitive << mem_to_immu << i_pmp_fault << i_page_fault << i_state;
-        SC_THREAD(imem_rsp);
+        SC_THREAD(imem_rsp_comb);
         sensitive << clk.pos();
-        SC_THREAD(imem_req);
+        SC_THREAD(imem_req_seq);
         sensitive << clk.pos();
     }
 
-    void dmem_rsp()
+    void dmem_rsp_comb()
     {
         wait();
         while (1)
@@ -175,7 +175,7 @@ SC_MODULE(MMU)
             dmmu_to_ex.write(dmmu_rsp);
         }
     }
-    void dmem_req()
+    void dmem_req_seq()
     {
         wait();
         while (1)
@@ -435,8 +435,8 @@ SC_MODULE(MMU)
         }
     }
 
-    // imem_rsp -> immu_ready -> pmp_check -> update
-    void imem_rsp()
+    // imem_rsp_comb -> immu_ready -> pmp_check -> update
+    void imem_rsp_comb()
     {
         wait();
         while (1)
@@ -467,7 +467,7 @@ SC_MODULE(MMU)
             immu_ready.write(immu_rsp.mmu_rsp_ack || i_state.read() == 0);
         }
     }
-    void imem_req()
+    void imem_req_seq()
     {
         wait();
         while (1)
@@ -671,6 +671,6 @@ SC_MODULE(MMU)
     {
         std::cout << "\nData paddr req " << dmmu_to_mem << " Dmmu state " << (int)d_state;
         std::cout << "\nData access rsp " << mem_to_dmmu;
-        std::cout << "\nTo LSU rsp " << dmmu_to_ex;
+        std::cout << "\nTo EXEC rsp " << dmmu_to_ex;
     }
 };

@@ -30,13 +30,13 @@ SC_MODULE(FetchInstruction)
     SC_HAS_PROCESS(FetchInstruction);
     FetchInstruction(sc_module_name name) : sc_module(name)
     {
-        SC_METHOD(get_inst);
+        SC_METHOD(get_inst_seq);
         sensitive << clk.pos();
-        SC_THREAD(buffer_state);
+        SC_THREAD(fifo_state_comb);
         // sensitive << stall << clk.neg();
         sensitive << clk.neg();
     }
-    void buffer_state() // info prefetch to fetch next pc
+    void fifo_state_comb() // info prefetch to fetch next pc
     {
         wait();
         while (1)
@@ -71,7 +71,7 @@ SC_MODULE(FetchInstruction)
             if_id_accept.write(accept);
         }
     }
-    void get_inst()
+    void get_inst_seq()
     {
         auto input = immu_to_ifetch.read();
         if (rst.read() || flush.read())

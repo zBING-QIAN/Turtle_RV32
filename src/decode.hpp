@@ -329,10 +329,10 @@ SC_MODULE(Decode)
     SC_HAS_PROCESS(Decode);
     Decode(sc_module_name name, RegFile * r) : sc_module(name), regs(r)
     {
-        SC_METHOD(inst_decode);
+        SC_METHOD(inst_decode_seq);
         sensitive << clk.pos();
     }
-    void inst_decode();
+    void inst_decode_seq();
     ID_EX decompress(uint32_t);
     ID_EX decode(uint32_t);
     void monitor()
@@ -340,7 +340,7 @@ SC_MODULE(Decode)
         std::cout << "ID : " << id_ex_tmp.debug_str();
     }
 };
-void Decode::inst_decode()
+void Decode::inst_decode_seq()
 {
 
     id_ex_tmp = ID_EX();

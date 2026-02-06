@@ -4,7 +4,7 @@
 #include <vector>
 #include <array>
 #include <systemc>
-#include <set>
+// #include <set>
 using namespace sc_core;
 #define PMPCOUNT 16
 #define PMPLOCK 128
@@ -21,10 +21,9 @@ SC_MODULE(PMP)
 {
     sc_vector<sc_signal<uint64_t>> pmpaddr;
     sc_vector<sc_signal<uint8_t>> pmpconfig;
-    std::set<int> pmpentry_id;
-    uint8_t cnt;
+    std::vector<int> pmpentry_id;
     SC_HAS_PROCESS(PMP);
-    PMP(sc_module_name name) : sc_module(name), cnt(0)
+    PMP(sc_module_name name) : sc_module(name)
     {
         pmpconfig.init(PMPCOUNT);
         pmpaddr.init(PMPCOUNT);
@@ -149,18 +148,14 @@ SC_MODULE(PMP)
                     pmpconfig[a].write(v);
                     if (pmpconfig[a].read() == 0 && v != 0)
                     {
-                        cnt++;
-                        pmpentry_id.insert(a);
+                        pmpentry_id.push_back(a);
                     }
                     if (pmpconfig[a].read() != 0 && v == 0)
                     {
-                        cnt--;
-                        pmpentry_id.erase(a);
+                        auto new_end = std::remove(pmpentry_id.begin(), pmpentry_id.end(), a);
+                        pmpentry_id.erase(new_end, pmpentry_id.end());
                     }
-                    // calc_range(a, pmpaddr[a].read(), v);
-                    // std::cerr << std::hex << "PMP id = " << a << "  config  = " << (int)v << "   addr" << pmpaddr[a].read() << "\n";
-                    // std::cerr << std::hex << "PMP base = " << addr_base[a] << "  PMP top  = " << addr_top[a] << "\n";
-                }
+                                }
             }
             val >>= 8;
         }

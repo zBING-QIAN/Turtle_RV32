@@ -17,10 +17,10 @@ SC_MODULE(MEXT)
     MEXT(sc_module_name name) : sc_module(name)
     {
 
-        SC_METHOD(mext_op);
+        SC_METHOD(mext_seq);
         sensitive << clk.pos();
     }
-    void mext_op()
+    void mext_seq()
     {
         if (mext_req_ack)
         {

@@ -62,11 +62,11 @@ SC_MODULE(EXEC)
         csr_regs.init(4096);
         priv = 3;
         reset_csr_registers();
-        SC_METHOD(comb_out);
+        SC_METHOD(exec_comb);
         sensitive << clk.neg();
-        SC_THREAD(csr_update);
+        SC_THREAD(exec_seq);
         sensitive << clk.pos();
-        SC_METHOD(writeback);
+        SC_METHOD(writeback_seq);
         sensitive << clk.pos();
     }
     void reset_csr_registers()
@@ -391,7 +391,7 @@ SC_MODULE(EXEC)
         }
     }
 
-    void comb_out()
+    void exec_comb()
     {
         _on_trap = 0, _stall = 0, _flush = 0;
         _csr_access = 0, _csr_mret = 0, _csr_sret = 0;
@@ -1008,7 +1008,7 @@ SC_MODULE(EXEC)
         }
     }
 
-    void csr_update()
+    void exec_seq()
     {
         wait();
         while (1)
@@ -1297,7 +1297,7 @@ SC_MODULE(EXEC)
         return pmp.icheck(addr, op, size, priv);
     }
 
-    void writeback()
+    void writeback_seq()
     {
         auto id_ex = id_ex_port.read();
         if (rst.read())

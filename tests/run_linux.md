@@ -106,12 +106,8 @@ Type ":step" num_cycles" to run num_cycles times. \
 Type ":c" to continue.\
 Send message to UART if ":" is not the first char.
 
-## 4. DATAPATH
-![]()
-![]()
-![]()
-
-
-
-
-
+## 6. Results
+![](../img/run_linux(1).png)
+![](../img/run_linux(2).png)
+![](../img/run_linux(3).png)
+![](../img/run_linux(4).png)

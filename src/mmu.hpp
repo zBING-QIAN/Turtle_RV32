@@ -117,53 +117,63 @@ SC_MODULE(MMU)
         // 2. solve pte from mem or handle request from lsu
         // 3. check pte valid and send request address to pmp check
         // 4. send valid request address (when pmp valid) to mem and wait memory response
-        SC_METHOD(dmem_rsp);
-        sensitive << mem_to_dmmu << d_pmp_fault << d_page_fault << d_state;
+        // SC_METHOD(dmem_rsp);
+        // sensitive << mem_to_dmmu << d_pmp_fault << d_page_fault << d_state;
+        SC_THREAD(dmem_rsp);
+        sensitive << clk.pos();
         SC_THREAD(dmem_req);
         sensitive << clk.pos();
-        SC_METHOD(imem_rsp);
-        sensitive << mem_to_immu << i_pmp_fault << i_page_fault << i_state;
+        // SC_METHOD(imem_rsp);
+        // sensitive << mem_to_immu << i_pmp_fault << i_page_fault << i_state;
+        SC_THREAD(imem_rsp);
+        sensitive << clk.pos();
         SC_THREAD(imem_req);
         sensitive << clk.pos();
     }
 
     void dmem_rsp()
     {
-        auto rsp = mem_to_dmmu.read();
-        MMU_RSP dmmu_rsp;
-        // d_page_fault & d_pmp_fault are saved in reg previously
+        wait();
+        while (1)
+        {
+            wait();
+            wait(1, SC_NS); // wait for mem response
+            auto rsp = mem_to_dmmu.read();
+            MMU_RSP dmmu_rsp;
+            // d_page_fault & d_pmp_fault are saved in reg previously
 
-        dmmu_rsp.mmu_rsp_ack = (d_state.read() == 3 && rsp.mem_rsp_ack) || d_page_fault.read() || d_pmp_fault.read() || d_misaligned_fault.read() || rsp.mem_rsp_fault != 0;
-        if (d_misaligned_fault.read())
-        {
-            if (d_op == 1)
-                dmmu_rsp.mmu_rsp_fault = LOAD_ADDR_MISALIGNED; // load misaligned fault
-            else
-                dmmu_rsp.mmu_rsp_fault = STORE_ADDR_MISALIGNED; // store misaligned fault
-        }
-        else if (d_page_fault.read())
-        {
-            if (d_op == 1)
-                dmmu_rsp.mmu_rsp_fault = LOAD_PAGE_FAULT; // load page fault
-            else
-                dmmu_rsp.mmu_rsp_fault = STORE_PAGE_FAULT; // store page fault
-        }
-        else
-        {
-            if (rsp.mem_rsp_fault == 0 && !d_pmp_fault.read())
-                dmmu_rsp.mmu_rsp_fault = 0;
-            else
+            dmmu_rsp.mmu_rsp_ack = (d_state.read() == 3 && rsp.mem_rsp_ack) || d_page_fault.read() || d_pmp_fault.read() || d_misaligned_fault.read() || rsp.mem_rsp_fault != 0;
+            if (d_misaligned_fault.read())
             {
                 if (d_op == 1)
-                    dmmu_rsp.mmu_rsp_fault = LOAD_ACCESS_FAULT; // load access fault
+                    dmmu_rsp.mmu_rsp_fault = LOAD_ADDR_MISALIGNED; // load misaligned fault
                 else
-                    dmmu_rsp.mmu_rsp_fault = STORE_ACCESS_FAULT; // store access fault
+                    dmmu_rsp.mmu_rsp_fault = STORE_ADDR_MISALIGNED; // store misaligned fault
             }
-            dmmu_rsp.mmu_rsp_rdata = rsp.mem_rsp_rdata;
+            else if (d_page_fault.read())
+            {
+                if (d_op == 1)
+                    dmmu_rsp.mmu_rsp_fault = LOAD_PAGE_FAULT; // load page fault
+                else
+                    dmmu_rsp.mmu_rsp_fault = STORE_PAGE_FAULT; // store page fault
+            }
+            else
+            {
+                if (rsp.mem_rsp_fault == 0 && !d_pmp_fault.read())
+                    dmmu_rsp.mmu_rsp_fault = 0;
+                else
+                {
+                    if (d_op == 1)
+                        dmmu_rsp.mmu_rsp_fault = LOAD_ACCESS_FAULT; // load access fault
+                    else
+                        dmmu_rsp.mmu_rsp_fault = STORE_ACCESS_FAULT; // store access fault
+                }
+                dmmu_rsp.mmu_rsp_rdata = rsp.mem_rsp_rdata;
+            }
+            if (dmmu_rsp.mmu_rsp_fault)
+                dmmu_rsp.mmu_rsp_tval = ex_to_dmmu.read().dmem_addr;
+            dmmu_to_ex.write(dmmu_rsp);
         }
-        if (dmmu_rsp.mmu_rsp_fault)
-            dmmu_rsp.mmu_rsp_tval = ex_to_dmmu.read().dmem_addr;
-        dmmu_to_ex.write(dmmu_rsp);
     }
     void dmem_req()
     {
@@ -428,28 +438,34 @@ SC_MODULE(MMU)
     // imem_rsp -> immu_ready -> pmp_check -> update
     void imem_rsp()
     {
-        auto rsp = mem_to_immu.read();
-        MMU_RSP immu_rsp;
-        // d_page_fault & d_pmp_fault are saved in reg previously
-        immu_rsp.mmu_rsp_ack = ((i_state.read() == 3 || immu_flush.read()) && rsp.mem_rsp_ack) || i_page_fault.read() || i_pmp_fault.read() || rsp.mem_rsp_fault != 0;
-        if (i_page_fault.read())
+        wait();
+        while (1)
         {
-            immu_rsp.mmu_rsp_fault = INSTR_PAGE_FAULT; // inst page fault
-        }
-        else
-        {
-            if (rsp.mem_rsp_fault == 0 && !i_pmp_fault.read())
-                immu_rsp.mmu_rsp_fault = 0;
+            wait();
+            wait(1, SC_NS); // wait for mem response
+            auto rsp = mem_to_immu.read();
+            MMU_RSP immu_rsp;
+            // d_page_fault & d_pmp_fault are saved in reg previously
+            immu_rsp.mmu_rsp_ack = ((i_state.read() == 3 || immu_flush.read()) && rsp.mem_rsp_ack) || i_page_fault.read() || i_pmp_fault.read() || rsp.mem_rsp_fault != 0;
+            if (i_page_fault.read())
+            {
+                immu_rsp.mmu_rsp_fault = INSTR_PAGE_FAULT; // inst page fault
+            }
             else
             {
-                immu_rsp.mmu_rsp_fault = 1; // inst access fault
+                if (rsp.mem_rsp_fault == 0 && !i_pmp_fault.read())
+                    immu_rsp.mmu_rsp_fault = 0;
+                else
+                {
+                    immu_rsp.mmu_rsp_fault = 1; // inst access fault
+                }
+                immu_rsp.mmu_rsp_rdata = rsp.mem_rsp_rdata;
             }
-            immu_rsp.mmu_rsp_rdata = rsp.mem_rsp_rdata;
+            if (immu_rsp.mmu_rsp_fault)
+                immu_rsp.mmu_rsp_tval = immu_pc.read();
+            immu_to_ifetch.write(immu_rsp);
+            immu_ready.write(immu_rsp.mmu_rsp_ack || i_state.read() == 0);
         }
-        if (immu_rsp.mmu_rsp_fault)
-            immu_rsp.mmu_rsp_tval = immu_pc.read();
-        immu_to_ifetch.write(immu_rsp);
-        immu_ready.write(immu_rsp.mmu_rsp_ack || i_state.read() == 0);
     }
     void imem_req()
     {

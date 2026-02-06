@@ -660,11 +660,9 @@ SC_MODULE(Memory)
 
         SC_METHOD(inst_fetch);
         sensitive << iin;
-        dont_initialize();
         // for non-blocking update memory
         SC_METHOD(mem_access);
         sensitive << din;
-        dont_initialize();
 
         SC_THREAD(update_memory);
         sensitive << clk.pos();

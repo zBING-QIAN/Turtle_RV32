@@ -32,37 +32,44 @@ SC_MODULE(FetchInstruction)
     {
         SC_METHOD(get_inst);
         sensitive << clk.pos();
-        SC_METHOD(buffer_state);
-        sensitive << stall << clk.neg();
+        SC_THREAD(buffer_state);
+        // sensitive << stall << clk.neg();
+        sensitive << clk.neg();
     }
     void buffer_state() // info prefetch to fetch next pc
     {
-        bool accept = 0;
-        auto input = immu_to_ifetch.read();
-        if (input.mmu_rsp_ack)
+        wait();
+        while (1)
         {
-            if (immu_pc.read() != buffer_addr + (buffer_idx >> 3))
+            wait();
+            wait(1, SC_NS); // wait EXEC::comb_out
+            bool accept = 0;
+            auto input = immu_to_ifetch.read();
+            if (input.mmu_rsp_ack)
             {
-                accept = 1;
-            }
-            else if (!stall.read() && !if_id_flush.read())
-            {
-                if ((buffer & 3) == 3)
+                if (immu_pc.read() != buffer_addr + (buffer_idx >> 3))
                 {
                     accept = 1;
                 }
+                else if (!stall.read() && !if_id_flush.read())
+                {
+                    if ((buffer & 3) == 3)
+                    {
+                        accept = 1;
+                    }
+                    else
+                    {
+                        accept = buffer_idx <= 48;
+                    }
+                }
                 else
                 {
-                    accept = buffer_idx <= 48;
+                    accept = (buffer_idx <= 32);
                 }
             }
-            else
-            {
-                accept = (buffer_idx <= 32);
-            }
+            // std::cout << "accept :" << accept << "\n";
+            if_id_accept.write(accept);
         }
-        // std::cout << "accept :" << accept << "\n";
-        if_id_accept.write(accept);
     }
     void get_inst()
     {

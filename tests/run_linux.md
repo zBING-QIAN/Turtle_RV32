@@ -98,3 +98,11 @@ Once all binaries are ready, launch the emulator using the `--mode=linux` flag.
       --sbi=./opensbi/build/platform/generic/firmware/fw_jump.bin \
       --dtb=./tests/linux-test/minimal.dtb
 ```
+
+Type ":r" to start running the code.
+Type ":p num_cycles" to print cpu status for num_cycles times.
+Type ":stop" to stop running.
+Type ":step num_cycles" to run num_cycles times. 
+Type ":c" to continue.
+Send message to UART if ":" is not the first char.
+

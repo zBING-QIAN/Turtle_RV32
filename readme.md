@@ -47,7 +47,7 @@ Booting a full Linux kernel with OpenSBI and a BusyBox-based initramfs.
 -   **Documentation:** tests/riscv-linux.md
     
 -   **Command:** `./emu --mode=linux --linux=<Image> --sbi=<fw_jump.bin> --dtb=<minimal.dtb>`\
-Type ":r" to start running the code.(See run_ui_console in src/utils.cpp for more action)
+Type ":r" to start running the code.(See run_ui_console in src/utils.cpp for more)
 
 
 -  **System Map**
@@ -62,21 +62,22 @@ The emulator assumes the following physical memory layout for Linux boot:
 |0x8010_0000|0x803F_FFFF|**DTB**|Hardware description|
 |0x8040_0000|0xFFFF_FFFF|**Linux Image**|kernel&rootfs|
 
-## DATAPATH
+## 4. DATAPATH
 ![](img/riscv.jpg)
 
 
 
 ## 5. Todo
 
-1.  **Memory Management:** Add a **TLB (Translation Lookaside Buffer)** to speed up Sv32 address translation.
     
-2.  **Storage:** Add **VirtIO-Block** device support to allow mounting persistent disk images.
+1. **Storage:** Add **VirtIO-Block** device support to allow mounting persistent disk images.
     
-3.  **Cache:** Implement **Instruction and Data Caches** to simulate memory latency more accurately. 
+2. **Cache:** Implement **Instruction and Data Caches** to simulate memory latency more accurately. 
 
-4.  **Branch Predictor:** Implement **Branch Predictor** to load instruction more efficiently.
+3. **Branch Predictor:** Implement **Branch Predictor** to load instruction more efficiently.
 
-5.  **Multi-Cores:** Implement SMP system.
+4. **Multi-Cores:** Implement SMP system.
+
+5. **UI** Implement better UI.
     
 6. **Performance** Improve the speed of simulation

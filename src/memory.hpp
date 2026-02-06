@@ -188,9 +188,9 @@ struct UART_DEV : Device
             uart_buf[uart_buf_end] = s[i];
             uart_buf_end = nxt_end;
         }
-        std::cerr << "[DEBUG] UART buffer : " << uart_buf << ", input string : " << s << "\n";
-        std::cerr << "[DEBUG] UART buffer_begin : " << uart_buf_begin << ", UART buffer_end : " << uart_buf_end << "\n";
-        std::cerr << "[DEBUG] UART IIR : " << iir << ", UART IER: " << ier << ", UART LCR: " << lcr << "\n";
+        // std::cerr << "[DEBUG] UART buffer : " << uart_buf << ", input string : " << s << "\n";
+        // std::cerr << "[DEBUG] UART buffer_begin : " << uart_buf_begin << ", UART buffer_end : " << uart_buf_end << "\n";
+        // std::cerr << "[DEBUG] UART IIR : " << iir << ", UART IER: " << ier << ", UART LCR: " << lcr << "\n";
     }
     bool uart_irq()
     {

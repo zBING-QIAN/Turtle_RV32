@@ -8,6 +8,7 @@
 #include "regfile.hpp"
 #include "memory.hpp"
 #include <systemc>
+#include "mext.hpp"
 using namespace sc_core;
 
 SC_MODULE(CPU)
@@ -28,6 +29,7 @@ SC_MODULE(CPU)
 
     // exec
     EXEC *exec;
+    MEXT *mext;
     // npc
     PreFetch *prefetch;
     // mmu
@@ -78,21 +80,30 @@ SC_MODULE(CPU)
     sc_signal<uint32_t> if_id_inst;
     sc_signal<uint8_t> if_id_fault;
 
+    sc_signal<bool> mext_req_ack;
+    sc_signal<bool> mext_rsp_ack;
+    sc_signal<uint32_t> mext_result;
     SC_HAS_PROCESS(CPU);
     CPU(sc_module_name name, uint32_t entry, CLINT_DEV *clint) : sc_module(name)
     {
         regs = new RegFile("regs");
         exec = new EXEC("csr", clint, entry);
+        mext = new MEXT("mext");
         prefetch = new PreFetch("prefetch");
         mmu = new MMU("mmu", exec);
         fetch_inst = new FetchInstruction("fetch_inst");
         decode = new Decode("decode", regs);
-        // csr  TODO: csr to mmu (pmpcheck)
+
         exec->clk(clk);
         exec->rst(rst);
 
         exec->ex_pc(ex_pc);
         exec->id_ex_port(id_ex_port);
+
+        // mext
+        exec->mext_result(mext_result);
+        exec->mext_rsp_ack(mext_rsp_ack);
+        exec->mext_req_ack(mext_req_ack);
 
         // dmem
         exec->dmmu_to_ex(dmmu_to_ex);
@@ -115,6 +126,15 @@ SC_MODULE(CPU)
         exec->wb_rd(wb_rd);
         exec->wb_pc(wb_pc);
         exec->wb_type(wb_type);
+
+        // mext
+        mext->clk(clk);
+        mext->rst(rst);
+
+        mext->mext_req_ack(mext_req_ack);
+        mext->id_ex_port(id_ex_port);
+        mext->mext_result(mext_result);
+        mext->mext_rsp_ack(mext_rsp_ack);
 
         // prefetch
         prefetch->clk(clk);

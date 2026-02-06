@@ -115,7 +115,7 @@ void run_ui_console(SharedState *share_state)
                     {
                         share_state->force_run = 1;
                         share_state->start = 1;
-                        std::cerr << "start simulate\n";
+                        // std::cerr << "start simulate\n";
                     }
                     else if (commands[0] == "timeirq")
                     {

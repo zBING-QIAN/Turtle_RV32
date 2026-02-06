@@ -47,16 +47,16 @@ struct TB_State
     {
         if (share_state->new_step_cycles > 0)
         {
-            std::cerr << "remain cycles : " << step_cycles << " cycles\n";
+            // std::cerr << "remain cycles : " << step_cycles << " cycles\n";
             step_cycles = share_state->new_step_cycles;
             share_state->new_step_cycles = 0;
-            std::cerr << "new cycles : " << step_cycles << " cycles\n";
+            // std::cerr << "new cycles : " << step_cycles << " cycles\n";
         }
         if (share_state->new_print_cycles > 0)
         {
             print_cycles = share_state->new_print_cycles;
             share_state->new_print_cycles = 0;
-            std::cerr << "print : " << print_cycles << " cycles\n";
+            // std::cerr << "print : " << print_cycles << " cycles\n";
         }
 
         if (state == 0)
@@ -150,12 +150,12 @@ SC_MODULE(Testbench)
     void clock()
     {
 
-        if (tb_state.share_state->force_run && hartbeats.read())
-        {
-            std::cerr << "[DEBUG] cur_time = " << clint.mtime << " mtimecmp = " << clint.mtimecmp << " stimecmp = " << ((((uint64_t)cpu.exec->csr_regs[CSR_STIMECMPH].read()) << 32) | cpu.exec->csr_regs[CSR_STIMECMP].read()) << "\n";
-            std::cerr << "[DEBUG] plic mirq= " << plic.core0_m_irq << " plic sirq= " << plic.core0_s_irq << "\n";
-            std::cerr << "[DEBUG] UART IIR : " << uart.iir << ", UART IER: " << uart.ier << ", UART LCR: " << uart.lcr << "\n";
-        }
+        // if (tb_state.share_state->force_run && hartbeats.read())
+        // {
+        //     std::cerr << "[DEBUG] cur_time = " << clint.mtime << " mtimecmp = " << clint.mtimecmp << " stimecmp = " << ((((uint64_t)cpu.exec->csr_regs[CSR_STIMECMPH].read()) << 32) | cpu.exec->csr_regs[CSR_STIMECMP].read()) << "\n";
+        //     std::cerr << "[DEBUG] plic mirq= " << plic.core0_m_irq << " plic sirq= " << plic.core0_s_irq << "\n";
+        //     std::cerr << "[DEBUG] UART IIR : " << uart.iir << ", UART IER: " << uart.ier << ", UART LCR: " << uart.lcr << "\n";
+        // }
         cpu.print_en = tb_state.print_cycles > 0;
         clk.write(hartbeats.read() && tb_state.next_cycle(cpu.ex_pc));
         // std::cerr << hartbeats.read() << " " << clk.read() << "\n";
@@ -166,11 +166,11 @@ SC_MODULE(Testbench)
         if (tb_state.share_state->timeirq)
         {
             uint64_t tmp = ((((uint64_t)cpu.exec->csr_regs[CSR_STIMECMPH].read()) << 32) | cpu.exec->csr_regs[CSR_STIMECMP].read());
-            std::cerr << "cur_time = " << clint.mtime << " mtimecmp = " << clint.mtimecmp << " stimecmp = " << tmp << "\n";
+            // std::cerr << "cur_time = " << clint.mtime << " mtimecmp = " << clint.mtimecmp << " stimecmp = " << tmp << "\n";
             tb_state.share_state->timeirq = 0;
 
             clint.mtime = tmp;
-            std::cerr << "cur_time = " << clint.mtime << " mtimecmp = " << clint.mtimecmp << " stimecmp = " << tmp << "\n";
+            // std::cerr << "cur_time = " << clint.mtime << " mtimecmp = " << clint.mtimecmp << " stimecmp = " << tmp << "\n";
         }
         else
             clint.mtime++;

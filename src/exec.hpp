@@ -17,6 +17,10 @@ SC_MODULE(EXEC)
 
     sc_out<uint32_t> ex_pc;
     sc_in<ID_EX> id_ex_port;
+    // mext
+    sc_out<bool> mext_req_ack;
+    sc_in<bool> mext_rsp_ack;
+    sc_in<uint32_t> mext_result;
 
     // dmem
     sc_in<MMU_RSP> dmmu_to_ex;
@@ -518,38 +522,16 @@ SC_MODULE(EXEC)
                     break;
                 // M-extension
                 case InstrType::MUL:
-                    _ex_rd_val = (int32_t)rs1_val * (int32_t)rs2_val;
-                    break;
                 case InstrType::MULH:
-                    _ex_rd_val = ((int64_t)(int32_t)rs1_val * (int64_t)(int32_t)rs2_val) >> 32;
-                    break;
                 case InstrType::MULHSU:
-                    _ex_rd_val = ((int64_t)(int32_t)rs1_val * (uint64_t)rs2_val) >> 32;
-                    break;
                 case InstrType::MULHU:
-                    _ex_rd_val = ((uint64_t)rs1_val * (uint64_t)rs2_val) >> 32;
-                    break;
                 case InstrType::DIV:
-                    if (rs2_val == 0)
-                        _ex_rd_val = -1;
-                    else if ((int32_t)rs1_val == INT32_MIN && (int32_t)rs2_val == -1)
-                        _ex_rd_val = INT32_MIN;
-                    else
-                        _ex_rd_val = (int32_t)rs1_val / (int32_t)rs2_val;
-                    break;
                 case InstrType::DIVU:
-                    _ex_rd_val = (rs2_val == 0) ? 0xFFFFFFFF : ((uint32_t)rs1_val / (uint32_t)rs2_val);
-                    break;
                 case InstrType::REM:
-                    if (rs2_val == 0)
-                        _ex_rd_val = rs1_val;
-                    else if ((int32_t)rs1_val == INT32_MIN && (int32_t)rs2_val == -1)
-                        _ex_rd_val = 0;
-                    else
-                        _ex_rd_val = (int32_t)rs1_val % (int32_t)rs2_val;
-                    break;
                 case InstrType::REMU:
-                    _ex_rd_val = (rs2_val == 0) ? rs1_val : ((uint32_t)rs1_val % (uint32_t)rs2_val);
+                    mext_req_ack.write(!wb_stall.read());
+                    _stall = !mext_rsp_ack;
+                    _ex_rd_val = mext_result;
                     break;
                 // ===================================================
                 // Load / Store

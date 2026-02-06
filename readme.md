@@ -78,6 +78,6 @@ The emulator assumes the following physical memory layout for Linux boot:
 
 4. **Multi-Cores:** Implement SMP system.
 
-5. **UI** Implement better UI.
+5. **UI:** Implement better UI.
     
-6. **Performance** Improve the speed of simulation
+6. **Performance:** Improve the speed of simulation

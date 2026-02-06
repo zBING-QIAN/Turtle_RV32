@@ -867,8 +867,7 @@ SC_MODULE(EXEC)
                             _ex_rd_val = csr_regs[CSR_MCYCLEH].read();
                             break;
                         default:
-                            // TODO : PMP
-                            if (id_ex.csr_addr >= PMPCONFIG0 && id_ex.csr_addr < PMPCONFIG0 + 16)
+                            if (id_ex.csr_addr >= PMPCONFIG0 && id_ex.csr_addr < PMPCONFIG0 + (PMPCOUNT >> 2))
                             {
                                 for (int t = 3, b = (id_ex.csr_addr - PMPCONFIG0) << 2; t >= 0; t--)
                                 {
@@ -876,15 +875,16 @@ SC_MODULE(EXEC)
                                     _ex_rd_val = pmp.pmpconfig[b + t];
                                 }
                             }
-                            else if (id_ex.csr_addr >= PMPADDR0 && id_ex.csr_addr < PMPADDR0 + 64)
+                            else if (id_ex.csr_addr >= PMPADDR0 && id_ex.csr_addr < PMPADDR0 + PMPCOUNT)
                                 _ex_rd_val = pmp.pmpaddr[id_ex.csr_addr - PMPADDR0];
+
                             else
                             {
                                 _ex_rd_val = csr_regs[id_ex.csr_addr].read();
                             }
 
-                            _flush = priv == 3 && ((id_ex.csr_addr >= PMPCONFIG0 && id_ex.csr_addr < PMPCONFIG0 + 16) ||
-                                                   (id_ex.csr_addr >= PMPADDR0 && id_ex.csr_addr < PMPADDR0 + 64));
+                            _flush = priv == 3 && ((id_ex.csr_addr >= PMPCONFIG0 && id_ex.csr_addr < PMPCONFIG0 + (PMPCOUNT >> 2)) ||
+                                                   (id_ex.csr_addr >= PMPADDR0 && id_ex.csr_addr < PMPADDR0 + PMPCOUNT));
                             break;
                         }
                     }
@@ -1068,16 +1068,18 @@ SC_MODULE(EXEC)
                     {
 
                         // TODO : PMP register update
-                        if (addr >= PMPCONFIG0 && addr < PMPCONFIG0 + 16 && priv == 3)
+                        if (addr >= PMPCONFIG0 && addr < PMPCONFIG0 + (PMPCOUNT >> 2) && priv == 3)
                         {
                             pmp.update_config(addr - PMPCONFIG0, _val);
                         }
 
-                        else if (addr >= PMPADDR0 && addr < PMPADDR0 + 64 && priv == 3)
+                        else if (addr >= PMPADDR0 && addr < PMPADDR0 + PMPCOUNT && priv == 3)
                         {
                             pmp.update_addr(addr - PMPADDR0, _val);
                         }
                         else if (
+                            (id_ex.csr_addr >= PMPADDR0 + (PMPCOUNT >> 2) && id_ex.csr_addr < PMPCONFIG0 + 16) ||
+                            (id_ex.csr_addr >= PMPADDR0 + PMPCOUNT && id_ex.csr_addr < PMPADDR0 + 64) ||
                             (addr > CSR_MCYCLE + 2 && addr < CSR_MCYCLE + 32) ||
                             (addr > CSR_MCYCLEH + 2 && addr < CSR_MCYCLEH + 32))
                         {

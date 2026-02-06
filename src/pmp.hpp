@@ -26,8 +26,8 @@ SC_MODULE(PMP)
     SC_HAS_PROCESS(PMP);
     PMP(sc_module_name name) : sc_module(name), cnt(0)
     {
-        pmpconfig.init(64);
-        pmpaddr.init(64);
+        pmpconfig.init(PMPCOUNT);
+        pmpaddr.init(PMPCOUNT);
     }
 
     bool dcheck(uint64_t addr, uint8_t op, uint8_t size, uint8_t priv) const
@@ -121,7 +121,7 @@ SC_MODULE(PMP)
     {
         if ((pmpconfig[addr].read() & PMPLOCK) == 0)
         {
-            if (addr == 63 ||
+            if (addr == PMPCOUNT - 1 ||
                 ((pmpconfig[addr + 1].read() & (PMPLOCK | 0x18)) != (PMPLOCK | 0x8)))
 
             {
@@ -141,7 +141,7 @@ SC_MODULE(PMP)
             uint8_t v = (int)(val & 0xff);
             if ((pmpconfig[a].read() & PMPLOCK) == 0)
             {
-                if (a == 63 ||
+                if (a == PMPCOUNT - 1 ||
                     ((pmpconfig[a + 1].read() & (PMPLOCK | 0x18)) != (PMPLOCK | 0x8)))
 
                 {

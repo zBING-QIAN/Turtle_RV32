@@ -50,6 +50,7 @@ SC_MODULE(CPU)
 
     sc_signal<bool> stall;
     sc_signal<bool> flush;
+    sc_signal<bool> branch_taken;
 
     // forwarding
     sc_signal<uint32_t> npc;
@@ -111,6 +112,7 @@ SC_MODULE(CPU)
 
         // ctrl
         exec->stall(stall);
+        exec->branch_taken(branch_taken);
         exec->flush(flush);
         exec->npc(npc);
 
@@ -138,16 +140,13 @@ SC_MODULE(CPU)
 
         // prefetch
         prefetch->clk(clk);
+        prefetch->rst(rst);
         prefetch->immu_ready(immu_ready);
-        // prefetch->ex_pc(ex_pc);
+        prefetch->flush(flush);
+
+        prefetch->branch_taken(branch_taken);
         prefetch->npc(npc);
-        prefetch->immu_pc(immu_pc);
-        prefetch->if_id_pc(if_id_pc);
-        prefetch->id_ex_pc(id_ex_pc);
-        prefetch->if_id_flush(if_id_flush);
         prefetch->if_id_accept(if_id_accept);
-        prefetch->id_ex_flush(id_ex_flush);
-        prefetch->immu_flush(immu_flush);
         prefetch->fetch_pc(fetch_pc);
         // mmu
         mmu->clk(clk);
@@ -219,30 +218,20 @@ SC_MODULE(CPU)
             if (print_en)
             {
                 if (rst.read())
-                    std::cout << "RESET CPU !!!\n";
+                    std::cout << "RESET!!!\n";
                 else if (flush.read())
                     std::cout << "FLUSH PIPELINE !!!\n";
                 else if (stall.read())
-                    std::cout << "CPU STALLING !!!\n";
-                std::cout << "Target PC = " << std::hex << ex_pc.read() << "  time " << sc_time_stamp();
-                std::cout << ", fetching PC = " << immu_pc.read();
-                std::cout << ", next fetching PC = " << fetch_pc.read() << "\n";
+                    std::cout << "STALLING !!!\n";
 
-                std::cout << "Current priv = " << exec->priv << " mstatus = " << exec->csr_regs[CSR_MSTATUS].read() << "\n";
+                std::cout << "Target PC = " << std::hex << ex_pc.read() << ", time " << sc_time_stamp() << "\n";
                 mmu->inst_monitor();
+                exec->csr_monitor();
                 fetch_inst->monitor();
                 decode->monitor();
-                std::cout << "\n";
                 exec->monitor();
                 mmu->data_monitor();
-                std::cout << "\nWB : PC=" << std::hex << wb_pc.read()
-                          << " " << to_string(wb_type.read())
-                          << " RDVAL=" << std::hex << wb_rd_val.read()
-                          << " rd=" << unsigned(wb_rd.read())
-                          << ((wb_write_rd.read())
-                                  ? " write back"
-                                  : "")
-                          << "\n\n";
+                exec->wb_monitor();
             }
         }
     }

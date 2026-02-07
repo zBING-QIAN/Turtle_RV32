@@ -25,7 +25,9 @@ SC_MODULE(EXEC)
     // dmem
     sc_in<MMU_RSP> dmmu_to_ex;
 
+    // ctrl signal
     sc_out<bool> stall;
+    sc_out<bool> branch_taken;
     sc_out<bool> flush;
     sc_out<uint32_t> npc;
 
@@ -105,13 +107,28 @@ SC_MODULE(EXEC)
             mip |= MIP_SEIP;
         return mip;
     }
+    void csr_monitor()
+    {
+        uint32_t mip = get_mip();
+        std::cout << std::hex << "Current priv = " << priv << " mstatus = " << csr_regs[CSR_MSTATUS].read() << ", MIP = " << mip << ", MIE = " << csr_regs[CSR_MIE] << "\n";
+    }
+    void wb_monitor()
+    {
+        if (wb_write_rd)
+            std::cout << "WB : PC=" << std::hex << wb_pc.read()
+                      << " " << to_string(wb_type.read())
+                      << " RDVAL=" << std::hex << wb_rd_val.read()
+                      << " rd=" << unsigned(wb_rd.read())
+                      << "\n";
+        std::cout << "\n";
+    }
     void monitor()
     {
         auto id_ex = id_ex_port.read();
         std::cout << "EXE : ";
         if (id_ex.flush || id_ex.pc != ex_pc.read())
         {
-            std::cout << "[NOP]";
+            std::cout << "[NOP]\n";
             return;
         }
         std::cout << "PC=" << std::hex << id_ex.pc << "  ";
@@ -330,14 +347,13 @@ SC_MODULE(EXEC)
         // // ----------------------------
         if (stall.read())
         {
-            uint32_t mip = get_mip();
-
-            std::cout << std::hex << " [stalled], MIP = " << mip << ", MIE = " << csr_regs[CSR_MIE];
+            std::cout << "[stalled]";
         }
         if (_on_trap)
         {
             std::cout << " [trapped no. " << _cause << ", tval = " << _tval << " epc=" << _epc << "]";
         }
+        std::cout << "\n";
     }
 
     uint32_t trap_pc(uint32_t _cause)
@@ -573,6 +589,7 @@ SC_MODULE(EXEC)
                     else
                         _ex_rd_val = id_ex.pc + 4;
                     _npc = id_ex.pc + id_ex.imm;
+                    _branch_taken = 1;
                     if (_npc & 1)
                     {
                         _stall = 0;
@@ -588,6 +605,7 @@ SC_MODULE(EXEC)
                     else
                         _ex_rd_val = id_ex.pc + 4;
                     _npc = (rs1_val + id_ex.imm) & ~1u;
+                    _branch_taken = 1;
                     if (_npc & 1)
                     {
                         _stall = 0;
@@ -872,7 +890,7 @@ SC_MODULE(EXEC)
                                 for (int t = 3, b = (id_ex.csr_addr - PMPCONFIG0) << 2; t >= 0; t--)
                                 {
                                     _ex_rd_val <<= 8;
-                                    _ex_rd_val = pmp.pmpconfig[b + t];
+                                    _ex_rd_val |= pmp.pmpconfig[b + t];
                                 }
                             }
                             else if (id_ex.csr_addr >= PMPADDR0 && id_ex.csr_addr < PMPADDR0 + PMPCOUNT)
@@ -906,7 +924,7 @@ SC_MODULE(EXEC)
                 }
             }
         }
-
+        branch_taken.write(_branch_taken);
         if (_on_trap)
         {
             npc.write(trap_pc(_cause));

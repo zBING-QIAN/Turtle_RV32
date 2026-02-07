@@ -664,13 +664,14 @@ SC_MODULE(MMU)
     }
     void inst_monitor()
     {
+        std::cout << "Fetching PC = " << immu_pc.read() << ", prefetching PC = " << fetch_pc.read() << "\n";
         std::cout << "Instruction paddr req " << immu_to_mem.read() << "\n";
         std::cout << "Instruction get " << mem_to_immu.read() << "\n";
     }
     void data_monitor()
     {
-        std::cout << "\nData paddr req " << dmmu_to_mem << " Dmmu state " << (int)d_state;
-        std::cout << "\nData access rsp " << mem_to_dmmu;
-        std::cout << "\nTo EXEC rsp " << dmmu_to_ex;
+        std::cout << "Data paddr req " << dmmu_to_mem << " Dmmu state " << (int)d_state << "\n";
+        std::cout << "Data access rsp " << mem_to_dmmu << "\n";
+        std::cout << "To EXEC rsp " << dmmu_to_ex << "\n";
     }
 };

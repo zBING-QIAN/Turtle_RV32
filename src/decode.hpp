@@ -90,7 +90,7 @@ struct ID_EX
     {
         std::ostringstream oss;
         if (flush)
-            return "[NOP]";
+            return "[NOP]\n";
 
         oss << std::hex << std::setfill('0');
         oss << "PC=" << pc << "  inst = 0x" << inst << " ";
@@ -287,7 +287,7 @@ struct ID_EX
             break;
         }
 
-        return oss.str();
+        return oss.str() + "\n";
     }
 };
 void sc_trace(sc_trace_file *tf, const ID_EX &v, const std::string &NAME)

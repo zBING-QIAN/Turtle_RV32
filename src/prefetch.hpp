@@ -7,7 +7,6 @@ SC_MODULE(PreFetch)
 {
     sc_in<bool> clk;
     sc_in<bool> rst;
-    sc_in<bool> immu_ready;
     sc_in<uint32_t> npc;
     sc_in<bool> if_id_accept;
 

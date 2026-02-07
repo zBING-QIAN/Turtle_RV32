@@ -141,7 +141,6 @@ SC_MODULE(CPU)
         // prefetch
         prefetch->clk(clk);
         prefetch->rst(rst);
-        prefetch->immu_ready(immu_ready);
         prefetch->flush(flush);
 
         prefetch->branch_taken(branch_taken);
